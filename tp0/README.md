@@ -49,6 +49,8 @@ provient la valeur de point d'entrée à `0x302010` au lieu de `0x300000`.**
 
 Note : il est possible de s'aider également de la page wiki sur les options de [linkage](https://github.com/agantet/secos-ng/wiki/Tooling#options-de-linkage).
 
+Car avant l'addresse de début on ajoute de l'espace pour `mbh` et `stack`.
+
 
 ## Cartographie mémoire au démarrage
 
