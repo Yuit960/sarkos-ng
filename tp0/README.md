@@ -103,7 +103,13 @@ debug("Reserved mem (at: 0xf0000):  before: 0x%x ", *ptr_in_reserved_mem); // re
 *ptr_in_reserved_mem = 0xaaaaaaaa;                           // write
 debug("after: 0x%x\n", *ptr_in_reserved_mem);                // check
 ```
-Le comportement observé semble-t-il cohérent ?
+Le comportement observé semble-t-il cohérent ? 
+Oui, Le premier bout de code cherche à modifier la valeur à l'addresse 0x0 qui est autorisé alors que le deuxieme bout de code touche à une partie réservé de la mémoire. Ainsi dans la zone mémoire disponible la variable a été modifiée tandis que dans la zone réservée la variable n'a pas été modifiée.
+
+```
+Available mem (0x0): before: 0xf000ff53 after: 0xaaaaaaaa
+Reserved mem (at: 0xf0000):  before: 0xa646e after: 0xa646e
+```
 
 **Q4 : Compléter la fonction `tp()` de [tp.c](./tp.c) pour essayer de lire ou
   écrire à une adresse en dehors de la mémoire physique disponible (128 MB).
