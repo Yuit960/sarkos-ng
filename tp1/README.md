@@ -42,6 +42,14 @@ point d'entrée du noyau.
 **Q2\* :  Dans [`tp.c`](./tp.c), un exemple d'implémentation d'affichage du
   contenu de table de type GDT est fournie (fonction `print_gdt_content`).
   L'utiliser pour afficher le contenu de la GDT courante.**
+```
+0 [0x0 - 0xfff0] seg_t: 0x0 desc_t: 0 priv: 0 present: 0 avl: 0 longmode: 0 def 
+1 [0x0 - 0xffffffff] seg_t: 0xa desc_t: 1 priv: 0 present: 1 avl: 0 longmode: 0 
+2 [0x0 - 0xffffffff] seg_t: 0x3 desc_t: 1 priv: 0 present: 1 avl: 0 longmode: 0 
+3 [0x0 - 0xffff] seg_t: 0xe desc_t: 1 priv: 0 present: 1 avl: 0 longmode: 0 def 
+4 [0x0 - 0xffff] seg_t: 0x3 desc_t: 1 priv: 0 present: 1 avl: 0 longmode: 0 def 
+```
+
 
 **Q3 : Lire les valeurs des sélecteurs de segment à l'aide des macros prévues
   à cet effet dans [`kernel/include/segmem.h`](../kernel/include/segmem.h), et en déduire quels descripteurs de cette GDT sont en
@@ -52,8 +60,12 @@ point d'entrée du noyau.
 * Le segment de pile (sélecteur ss)
 * D'autres segments (sélecteurs autres : es, fs, gs, etc.)
 
+Le descripteur d'index `2` est en cours d'utilisation pour les segments ds, ss, es, fs, gs. Car on obtient 16 en sortie de `get_**()` et en shiftant à droite de 3 bits (diviser par 8) on obtient 2.
+
 **Q4 : Que constate-t-on ? Que dire de la ségrégation mémoire mise en place
   par défaut par GRUB avec une telle configuration ?**
+
+Tous les segments utilisent le descripteur de segment d'index `2`. Il n'y a pas de ségrégation mémoire par défaut.
 
 
 ## Une première reconfiguration de la GDT : en mode "flat"

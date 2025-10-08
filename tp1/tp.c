@@ -37,5 +37,16 @@ void print_gdt_content(gdt_reg_t gdtr_ptr) {
 
 
 void tp() {
-	// TODO
+	//QUESTION 2
+    gdt_reg_t gdt;
+    get_gdtr(gdt);
+    print_gdt_content(gdt);
+
+
+    // get_ds()
+    debug("%d\n", get_ds());
+    debug("%d\n", get_ss());
+    debug("%d\n", get_es());
+    debug("%d\n", get_fs());
+    debug("%d\n", get_gs());
 }
