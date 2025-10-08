@@ -105,7 +105,7 @@ système relatifs à la segmentation : GDTR, cs/ss/ds/etc.
   Intel à ce sujet ? Faire de même avec un descripteur de segment de données
   pour le sélecteur CS.**
 
-KVM plante.
+KVM plante dans le premier cas. Dans le deuxième cas on a une General protection exception.
 
 
 ## Exemple d'utilisation de la segmentation pour la sécurité
@@ -139,7 +139,11 @@ Note : L'implémentation de `_memcpy8()` de SECOS repose sur l'instruction x86
   32);`. Que se passe-t-il ? Pourquoi n'y a-t-il pas de faute mémoire alors
   que le pointeur `dst` est NULL ?**
 
+  Il n'y a pas d'exception, car le segment fait une taille de 32 octets et comme le pointeur est null est que nous sommes dans un addressage virtuel, l'adresse linéaire de dst est ``base``.
+
 **Q11 : De même, effectuer à présent une copie de 64 octets. Que se passe-t-il ? Pourquoi ?**
+
+Un exception General protection est levée, car on dépasse la limite du segment.
 
 ## Première tentative de démarrage de code en ring 3
 
@@ -165,10 +169,14 @@ par exemple mettre à jour le registre de contrôle CR0 :
   qui pointent vers les descripteurs ring 3 :**
 
 * **Que se passe-t-il lors du chargement de DS/ES/FS/GS ?**
+RIEN
 * **Que se passe-t-il lors du chargement de SS ?**
+CA PLANTE
 * **Concernant la mise à jour du sélecteur CS, effectuer un "far jump" (cf. fonction `farjump()` définie dans [kernel/include/segmem.h](../kernel/include/segmem.h)) vers la fonction `userland()`, avec en paramètre (cf. type `fptr32_t` défini dans [kernel/include/types.h](../kernel/include/types.h)) avec l'adresse de la fonction `userland()` comme nouvel offset, et l'index permettant de sélectionner le descripteur de code ring 3 défini en question Q12 et un RPL à 3 comme nouveau sélecteur.**
 
 **Que se passe-t-il ? Comment un noyau pourrait-il faire autrement pour démarrer une tâche en ring 3 ?**
+
+Ca plante également. Il faudrait détourner l'usage de iret pour profiter du changement de contexte que le CPU sait effectuer à ce moment là.
 
 Cette méthode sera abordée et à implémenter en fin de tp suivant.
 

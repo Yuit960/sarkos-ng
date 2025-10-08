@@ -1,6 +1,7 @@
 /* GPLv2 (c) Airbus */
 #include <debug.h>
 #include <segmem.h>
+#include <string.h>
 
 void userland() {
    asm volatile ("mov %eax, %cr0");
@@ -53,8 +54,7 @@ void tp() {
    debug("GS ndex: %d\n", get_gs() >> 3);
 
    //QUESTION 5
-   seg_desc_t new_gdt[3];
-   new_gdt[0] = (seg_desc_t){0};
+   seg_desc_t new_gdt[6] = {0};
 
    new_gdt[1].base_1 = 0;
    new_gdt[1].base_2 = 0;
@@ -94,11 +94,84 @@ void tp() {
    set_cs(gdt_krn_seg_sel(1));
 
    //QUESTION 7
-   debug("\nNew GDT:\n");
+   debug("\nNew GDT (Q7):\n");
    get_gdtr(gdt);
    print_gdt_content(gdt);
 
    //QUESTION 8
-   set_ds(gdt_krn_seg_sel(1));
+   //set_ds(gdt_krn_seg_sel(1));
+   //set_cs(gdt_krn_seg_sel(2));
 
+   //QUESTION 9
+   char  src[64];
+   char *dst = 0;
+   
+   memset(src, 0xff, 64);
+
+   new_gdt[3].base_1 = 0;
+   new_gdt[3].base_2 = 0x60;
+   new_gdt[3].base_3 = 0;
+   new_gdt[3].limit_1 = 0x1f;
+   new_gdt[3].limit_2 = 0x0;
+   new_gdt[3].type = 0x3;
+   new_gdt[3].s = 0x1;
+   new_gdt[3].dpl = 0x0;
+   new_gdt[3].p = 0x1;
+   new_gdt[3].avl = 0x0;
+   new_gdt[3].l = 0x0;
+   new_gdt[3].d = 0x1;
+   new_gdt[3].g = 0x0;
+
+   debug("\nNew GDT (Q9):\n");
+   print_gdt_content(gdt);
+
+   //QUESTION 10
+   set_es(gdt_krn_seg_sel(3));
+   _memcpy8(dst, src, 32);
+
+   //QUESTION 11
+   //_memcpy8(dst, src, 64);
+
+   //QUESTION 12
+   new_gdt[4].base_1 = 0;
+   new_gdt[4].base_2 = 0;
+   new_gdt[4].base_3 = 0;
+   new_gdt[4].limit_1 = 0xffff;
+   new_gdt[4].limit_2 = 0xf;
+   new_gdt[4].type = 0xb;
+   new_gdt[4].s = 0x1;
+   new_gdt[4].dpl = 0x3;
+   new_gdt[4].p = 0x1;
+   new_gdt[4].avl = 0x1;
+   new_gdt[4].l = 0x0;
+   new_gdt[4].d = 0x1;
+   new_gdt[4].g = 0x1;
+
+   new_gdt[5].base_1 = 0;
+   new_gdt[5].base_2 = 0;
+   new_gdt[5].base_3 = 0;
+   new_gdt[5].limit_1 = 0xffff;
+   new_gdt[5].limit_2 = 0xf;
+   new_gdt[5].type = 0x3;
+   new_gdt[5].s = 0x1;
+   new_gdt[5].dpl = 0x3;
+   new_gdt[5].p = 0x1;
+   new_gdt[5].avl = 0x0;
+   new_gdt[5].l = 0x0;
+   new_gdt[5].d = 0x1;
+   new_gdt[5].g = 0x1;
+
+   debug("\nNew GDT (Q12):\n");
+   print_gdt_content(gdt);
+
+   //QUESTION 13
+   set_ds(gdt_usr_seg_sel(5));
+   set_es(gdt_usr_seg_sel(5));
+   set_fs(gdt_usr_seg_sel(5));
+   set_gs(gdt_usr_seg_sel(5));
+
+   //set_ss(gdt_usr_seg_sel(5));
+   
+   // fptr32_t fptr = {.segment = gdt_usr_seg_sel(4), .offset = (uint32_t)userland};
+   // farjump(fptr);
 }
