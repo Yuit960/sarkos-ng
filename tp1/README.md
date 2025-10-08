@@ -1,4 +1,4 @@
-# TP1 - La segmentation
+# TP1 - La segmentation 
 
 Le but du TP est de bien comprendre la notion de segmentation.
 
