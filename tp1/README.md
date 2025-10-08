@@ -105,6 +105,8 @@ système relatifs à la segmentation : GDTR, cs/ss/ds/etc.
   Intel à ce sujet ? Faire de même avec un descripteur de segment de données
   pour le sélecteur CS.**
 
+KVM plante.
+
 
 ## Exemple d'utilisation de la segmentation pour la sécurité
 

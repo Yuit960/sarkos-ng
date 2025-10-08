@@ -38,15 +38,67 @@ void print_gdt_content(gdt_reg_t gdtr_ptr) {
 
 void tp() {
 	//QUESTION 2
-    gdt_reg_t gdt;
-    get_gdtr(gdt);
-    print_gdt_content(gdt);
+   debug("\nCurrent GDT:\n");
+   gdt_reg_t gdt;
+   get_gdtr(gdt);
+   print_gdt_content(gdt);
 
 
-    // get_ds()
-    debug("%d\n", get_ds());
-    debug("%d\n", get_ss());
-    debug("%d\n", get_es());
-    debug("%d\n", get_fs());
-    debug("%d\n", get_gs());
+   debug("\nSegments selectors:\n");
+   debug("CS index: %d\n", get_cs() >> 3);
+   debug("DS index: %d\n", get_ds() >> 3);
+   debug("SS index: %d\n", get_ss() >> 3);
+   debug("ES index: %d\n", get_es() >> 3);
+   debug("FS index: %d\n", get_fs() >> 3);
+   debug("GS ndex: %d\n", get_gs() >> 3);
+
+   //QUESTION 5
+   seg_desc_t new_gdt[3];
+   new_gdt[0] = (seg_desc_t){0};
+
+   new_gdt[1].base_1 = 0;
+   new_gdt[1].base_2 = 0;
+   new_gdt[1].base_3 = 0;
+   new_gdt[1].limit_1 = 0xffff;
+   new_gdt[1].limit_2 = 0xf;
+   new_gdt[1].type = 0xb;
+   new_gdt[1].s = 0x1;
+   new_gdt[1].dpl = 0x0;
+   new_gdt[1].p = 0x1;
+   new_gdt[1].avl = 0x1;
+   new_gdt[1].l = 0x0;
+   new_gdt[1].d = 0x1;
+   new_gdt[1].g = 0x1;
+
+   new_gdt[2].base_1 = 0;
+   new_gdt[2].base_2 = 0;
+   new_gdt[2].base_3 = 0;
+   new_gdt[2].limit_1 = 0xffff;
+   new_gdt[2].limit_2 = 0xf;
+   new_gdt[2].type = 0x3;
+   new_gdt[2].s = 0x1;
+   new_gdt[2].dpl = 0x0;
+   new_gdt[2].p = 0x1;
+   new_gdt[2].avl = 0x0;
+   new_gdt[2].l = 0x0;
+   new_gdt[2].d = 0x1;
+   new_gdt[2].g = 0x1;
+
+   //QUESTION 6
+   gdt_reg_t new_gdt_reg;
+   new_gdt_reg.addr = (long unsigned int)new_gdt;
+   new_gdt_reg.limit = sizeof(new_gdt) - 1;
+
+   set_gdtr(new_gdt_reg);
+   set_ds(gdt_krn_seg_sel(2));
+   set_cs(gdt_krn_seg_sel(1));
+
+   //QUESTION 7
+   debug("\nNew GDT:\n");
+   get_gdtr(gdt);
+   print_gdt_content(gdt);
+
+   //QUESTION 8
+   set_ds(gdt_krn_seg_sel(1));
+
 }
