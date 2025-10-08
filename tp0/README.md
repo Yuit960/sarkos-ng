@@ -114,3 +114,5 @@ Reserved mem (at: 0xf0000):  before: 0xa646e after: 0xa646e
 **Q4 : Compléter la fonction `tp()` de [tp.c](./tp.c) pour essayer de lire ou
   écrire à une adresse en dehors de la mémoire physique disponible (128 MB).
   Que se passe-t-il ? Comment pourrait-on l'expliquer ?**
+
+On peut ni lire ni écrire en dehors de la mémoire physique disponible.
