@@ -90,6 +90,8 @@ qu'elle puisse gérer l'exception #BP. Le but est de ne pas modifier
   impact sur la pile ? Est-ce cohérent avec ce qui était sur la pile au
   moment de l'arrivée d'une interruption ?**
 
+La dernière instruction de `bp_handler()` est un `ret`, mais comme l'addresse de retour n'a pas été stockée avant l'interruption (car c'est une interruption), le kernel crashe.
+
 ### Deuxième essai : via l'assembleur inline
 
 L'idée est de réécrire `bp_handler` en assembleur inline pour éviter l'écueil
