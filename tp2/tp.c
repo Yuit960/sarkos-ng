@@ -11,6 +11,7 @@ void bp_handler() {
 void bp_trigger() {
 	//QUESTION 4
 	asm volatile("int3"::);
+	debug("BP triggered\n");
 }
 
 void tp() {
