@@ -42,6 +42,8 @@ des espaces d'adressage.
 **Q3\* : Modifier le registre CR0 de sorte à activer la pagination dans `tp.c`.
   Que se passe-t-il ? Pourquoi ?**
 
+Le kernel crashe, car la PGD n'est pas initialisée.
+
 **Q4\* : Un certain nombre de choses restent à configurer avant l'activation de
   la pagination. Comme pour le PGD, allouer également une PTB de type `
   (pte32_t*)` à l'adresse `0x601000`.**
@@ -60,9 +62,13 @@ des espaces d'adressage.
   capable de modifier les entrées de votre PTB une fois la pagination
   activée.**
 
+On a un page fault car l'adresse n'est pas mappée, il faut rajouter une PTB pour que l'adresse soit mappée (rentre dans le range des adresses mappées).
+
 **Q7\* : Avant d'activer la pagination, on souhaiterait faire en sorte que
   l'adresse virtuelle `0xc0000000` permette de modifier votre PGD après
   activation de la pagination. Comment le réaliser ?**
+
+Il faut rajouter une PTB au bon index dans la PGD et faire pointer le bon index de cette PTB vers l'adresse de la PGD.
 
 
 ## Quelques exercices supplémentaires de configuration spécifique
@@ -73,3 +79,5 @@ des espaces d'adressage.
 
 **Q9 : Effacer la première entrée du PGD. Que constatez-vous ? Expliquez
   pourquoi ?**
+
+L'OS crash, car on a effacé la PGD.
