@@ -45,6 +45,8 @@ void userland() {
 **Q3\* : Pourquoi observe-t-on une #GP ? Corriger le problème de sorte qu'il
   soit autorisé d'appeler l'interruption "48" avec un RPL à 3.**
 
+Car on a pas mit le flag DPL à 3 sur l'entrée de l'IDT.
+
 **Q4\* : Modifier la fonction `syscall_handler()` pour qu'elle affiche une
   chaîne de caractères dont l'adresse se trouve dans le registre "ESI". Nous
   venons de créer un appel système permettant d'afficher un message à l'écran
@@ -55,3 +57,5 @@ void userland() {
   `syscall_handler()` ? Essayez de pirater ce service, depuis `userland
   ()`, afin de lire de la mémoire du noyau. Modifier le code de
   `syscall_handler` pour corriger ce problème.**
+
+On peut modifier le registre ESI depuis le Ring 3, donc un user peut lire la mémoire niveau ring 0 depuis ring 3 en choisissant la valeur de ESI.
