@@ -135,13 +135,45 @@ void init_gdt(){
 	gdt[4].g = 0x1;
 }
 
+void map_page(uint32_t phys_addr, uint32_t virt_addr, uint32_t flags) {
+    uint32_t pgd_idx = pd32_get_idx(virt_addr);
+    uint32_t ptb_idx = pt32_get_idx(virt_addr);
+
+    pde32_t *pde = &pgd[pgd_idx];
+    pte32_t *ptb;
+
+    if (!pde->p) {
+        uint32_t new_ptb_phys = 0x601000 + (pgd_idx * 0x1000);
+        ptb = (pte32_t *)new_ptb_phys;
+        memset(ptb, 0, PAGE_SIZE);
+        pg_set_entry(pde, PG_USR | PG_RW, page_get_nr(ptb));
+    } else {
+        ptb = (pte32_t *)(page_get_addr(pde->addr));
+    }
+
+    pg_set_entry(&ptb[ptb_idx], flags, page_get_nr(phys_addr));
+}
+
 void init_pagination(){
-	pte32_t *ptb = (pte32_t *)0x601000;
-	for (int i = 0; i<1024; i++){
-		pg_set_entry(&ptb[i], PG_KRN|PG_RW, i);
-	}
-	memset(pgd, 0, PAGE_SIZE);
-	pg_set_entry(&pgd[0], PG_KRN|PG_RW, page_get_nr(ptb));
+    set_cr3(pgd);
+    memset(pgd, 0, PAGE_SIZE);
+
+    for (uint32_t addr = 0; addr < 0x400000; addr += 0x1000) {
+        map_page(addr, addr, PG_KRN | PG_RW);
+    }
+
+    for (uint32_t addr = 0x400000; addr < 0x800000; addr += 0x1000) {
+        map_page(addr, addr, PG_USR | PG_RW);
+    }
+
+    uint32_t shared_frame = 0x800000;
+    map_page(shared_frame, SHARED_ADDR_U1, PG_USR | PG_RW);
+    map_page(shared_frame, SHARED_ADDR_U2, PG_USR | PG_RW);
+}
+
+void activate_pagination(){
+	cr0_reg_t cr0 = {.raw = get_cr0()};
+	set_cr0(cr0.raw|CR0_PG);
 }
 
 void set_selectors(){
@@ -197,6 +229,18 @@ void tp() {
 
 	//Set pagination
 	init_pagination();
-	//activate pagination
-	
+	activate_pagination();
+
+	int *k = (int *)0x300000; 
+    debug("Kernel Check: %x\n", *k);
+
+    int *u = (int *)0x400000;
+    debug("User Code Check (0x400000) : %x\n", *u);
+
+    // Test Shared Memory
+    int *s1 = (int *)SHARED_ADDR_U1;
+    *s1 = 42;
+    int *s2 = (int *)SHARED_ADDR_U2;
+    debug("Shared Check: Ecrit 42 a CAFE... Lu %d a BEEF...\n", *s2);
+
 }

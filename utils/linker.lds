@@ -31,8 +31,8 @@ SECTIONS
    . = 0x400000;
    __user_start__ = .;
 
-   .user : {
+   .user : { KEEP(*(.user)) }
 
-   } : phsetup
+   __user_end__ = .;
 
 }
