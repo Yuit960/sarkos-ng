@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
 include ../utils/config.mk
-objects += utils.o segmentation.o paging.o interrupts.o scheduler.o user.o tp.o
+objects += src/utils.o src/segmentation.o src/paging.o src/interrupts.o src/scheduler.o src/user.o tp.o
 include ../utils/rules.mk
 #-include $(dependencies)
