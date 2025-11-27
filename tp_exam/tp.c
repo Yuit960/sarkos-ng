@@ -3,6 +3,7 @@
 #include <segmem.h>
 #include <pagemem.h>
 #include <cr.h>
+#include <intr.h>
 
 /*SEGMENT FOR DEBUG START*/
 
@@ -57,6 +58,9 @@ void print_gdt_content(gdt_reg_t gdtr_ptr) {
 #define SHARED_ADDR_U1  0xCAFE0000
 #define SHARED_ADDR_U2  0xBEEF0000
 
+#define PRINT_COUNTER_ISR 1
+#define CLOCK_ISR 32
+
 #define tss_dsc(_dSc_,_tSs_)                                            \
    ({                                                                   \
       raw32_t addr    = {.raw = _tSs_};                                 \
@@ -72,6 +76,9 @@ static tss_t TSS;
 static seg_desc_t gdt[7];
 static gdt_reg_t gdtr;
 static pde32_t *pgd = (pde32_t *)0x600000;
+
+
+//SEGMENTATION
 
 void init_gdt(){
 	//RING 0 Code
@@ -135,6 +142,34 @@ void init_gdt(){
 	gdt[4].g = 0x1;
 }
 
+void set_selectors(){
+
+	//RING 0 selectors
+	set_cs(gdt_krn_seg_sel(1));
+
+	set_ss(gdt_krn_seg_sel(2));
+	set_ds(gdt_krn_seg_sel(2));
+	set_es(gdt_krn_seg_sel(2));
+	set_fs(gdt_krn_seg_sel(2));
+	set_gs(gdt_krn_seg_sel(2));
+
+	//RING 3 selectors
+	set_ds(gdt_usr_seg_sel(4));
+	set_es(gdt_usr_seg_sel(4));
+	set_fs(gdt_usr_seg_sel(4));
+	set_gs(gdt_usr_seg_sel(4));
+	
+	//TSS selector
+	set_tr(gdt_krn_seg_sel(5));
+}
+
+
+
+
+
+
+///PAGINATION
+
 void map_page(uint32_t phys_addr, uint32_t virt_addr, uint32_t flags) {
     uint32_t pgd_idx = pd32_get_idx(virt_addr);
     uint32_t ptb_idx = pt32_get_idx(virt_addr);
@@ -176,29 +211,67 @@ void activate_pagination(){
 	set_cr0(cr0.raw|CR0_PG);
 }
 
-void set_selectors(){
 
-	//RING 0 selectors
-	set_cs(gdt_krn_seg_sel(1));
 
-	set_ss(gdt_krn_seg_sel(2));
-	set_ds(gdt_krn_seg_sel(2));
-	set_es(gdt_krn_seg_sel(2));
-	set_fs(gdt_krn_seg_sel(2));
-	set_gs(gdt_krn_seg_sel(2));
 
-	//RING 3 selectors
-	set_ds(gdt_usr_seg_sel(4));
-	set_es(gdt_usr_seg_sel(4));
-	set_fs(gdt_usr_seg_sel(4));
-	set_gs(gdt_usr_seg_sel(4));
-	
-	//TSS selector
-	set_tr(gdt_krn_seg_sel(5));
+
+//INTERRUPTIONS
+
+
+void syscall_isr() {
+   asm volatile (
+      "leave ; pusha        \n"
+      "mov %esp, %eax      \n"
+      "call syscall_handler \n"
+      "popa ; iret"
+      );
+}
+
+void __regparm__(1) syscall_handler(int_ctx_t *ctx){
+	uint32_t int_n = ctx->gpr.eax.raw;
+	uint32_t param = ctx->gpr.ebx.raw;
+
+	switch (int_n){
+	case PRINT_COUNTER_ISR:
+		debug("Counter at addr %p, value %d\n", (uint32_t*)param, *((uint32_t*)param));
+		break;
+
+	case CLOCK_ISR:
+		break;
+
+	default:
+		debug("Cannont handle the interruption number %d\n", int_n);
+		break;
+	}
+}
+
+void init_interruption(){
+	idt_reg_t idtr;
+   	get_idtr(idtr);
+	int_desc_t *bp_dsc = &idtr.desc[0x80];
+	bp_dsc->offset_1 = (uint16_t)((uint32_t)syscall_isr);
+	bp_dsc->offset_2 = (uint16_t)(((uint32_t)syscall_isr)>>16);
+}
+
+
+
+
+
+
+//USER FUNCTIONS
+
+__attribute__((section(".user"))) void sys_counter(uint32_t *counter){
+	asm volatile (
+        "int $0x80"
+        :         
+        : "a" (1),
+		  "b" (counter)  
+        : "memory"       
+    );
 }
 
 __attribute__((section(".user"))) void user1(void){
-	volatile uint32_t *counter_addr = (volatile uint32_t *)SHARED_ADDR_U1;
+	uint32_t *counter_addr = (uint32_t *)SHARED_ADDR_U1;
 	uint32_t counter = 0;
 	while(1){
 		*counter_addr = counter++;
@@ -207,8 +280,17 @@ __attribute__((section(".user"))) void user1(void){
 }
 
 __attribute__((section(".user"))) void user2(void){
-	while(1);
+	uint32_t *counter_addr = (uint32_t *)SHARED_ADDR_U2;
+	while(1){
+		sys_counter(counter_addr);
+	};
 }
+
+
+
+
+//MAIN FUNCTION
+
 
 void tp() {
 	//Create GDT
@@ -225,22 +307,11 @@ void tp() {
 	//Selectors
 	set_selectors();
 
-	print_gdt_content(gdtr);
-
 	//Set pagination
 	init_pagination();
 	activate_pagination();
 
-	int *k = (int *)0x300000; 
-    debug("Kernel Check: %x\n", *k);
-
-    int *u = (int *)0x400000;
-    debug("User Code Check (0x400000) : %x\n", *u);
-
-    // Test Shared Memory
-    int *s1 = (int *)SHARED_ADDR_U1;
-    *s1 = 42;
-    int *s2 = (int *)SHARED_ADDR_U2;
-    debug("Shared Check: Ecrit 42 a CAFE... Lu %d a BEEF...\n", *s2);
+	//Init interruptions
+	init_interruption();
 
 }
