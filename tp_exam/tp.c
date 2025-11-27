@@ -96,7 +96,10 @@ typedef struct {
 static tss_t TSS;
 static seg_desc_t gdt[7];
 static gdt_reg_t gdtr;
-static pde32_t *pgd = (pde32_t *)0x600000;
+
+static pde32_t pgd_t1[1024] __attribute__((aligned(4096)));
+static pde32_t pgd_t2[1024] __attribute__((aligned(4096)));
+static uint32_t next_ptb_phys_addr = 0x610000;
 
 uint8_t kstack_t1[STACK_SIZE] __attribute__((aligned(4096)));
 uint8_t kstack_t2[STACK_SIZE] __attribute__((aligned(4096)));
@@ -199,18 +202,21 @@ void set_selectors(){
 
 ///PAGINATION
 
-void map_page(uint32_t phys_addr, uint32_t virt_addr, uint32_t flags) {
+void map_page(pde32_t *target_pgd, uint32_t phys_addr, uint32_t virt_addr, uint32_t flags) {
     uint32_t pgd_idx = pd32_get_idx(virt_addr);
     uint32_t ptb_idx = pt32_get_idx(virt_addr);
 
-    pde32_t *pde = &pgd[pgd_idx];
+    pde32_t *pde = &target_pgd[pgd_idx];
     pte32_t *ptb;
 
     if (!pde->p) {
-        uint32_t new_ptb_phys = 0x601000 + (pgd_idx * 0x1000);
+        uint32_t new_ptb_phys = next_ptb_phys_addr;
+        next_ptb_phys_addr += 4096;
+
         ptb = (pte32_t *)new_ptb_phys;
         memset(ptb, 0, PAGE_SIZE);
-        pg_set_entry(pde, PG_USR | PG_RW, page_get_nr(ptb));
+        
+        pg_set_entry(pde, PG_USR | PG_RW, page_get_nr(new_ptb_phys));
     } else {
         ptb = (pte32_t *)(page_get_addr(pde->addr));
     }
@@ -219,21 +225,20 @@ void map_page(uint32_t phys_addr, uint32_t virt_addr, uint32_t flags) {
 }
 
 void init_pagination(){
-    set_cr3(pgd);
-    memset(pgd, 0, PAGE_SIZE);
+    memset(pgd_t1, 0, sizeof(pgd_t1));
+    memset(pgd_t2, 0, sizeof(pgd_t2));
     
-
-    for (uint32_t addr = 0; addr < 0x400000; addr += 0x1000) {
-        map_page(addr, addr, PG_KRN | PG_USR | PG_RW);
-    }
-
-    for (uint32_t addr = 0x400000; addr < 0x800000; addr += 0x1000) {
-        map_page(addr, addr, PG_USR | PG_RW);
+    for (uint32_t addr = 0; addr < 0x800000; addr += 0x1000) {
+        map_page(pgd_t1, addr, addr, PG_KRN | PG_USR | PG_RW);
+        map_page(pgd_t2, addr, addr, PG_KRN | PG_USR | PG_RW);
     }
 
     uint32_t shared_frame = 0x800000;
-    map_page(shared_frame, SHARED_ADDR_U1, PG_USR | PG_RW);
-    map_page(shared_frame, SHARED_ADDR_U2, PG_USR | PG_RW);
+
+    map_page(pgd_t1, shared_frame, SHARED_ADDR_U1, PG_USR | PG_RW);
+    map_page(pgd_t2, shared_frame, SHARED_ADDR_U2, PG_USR | PG_RW);
+    
+    set_cr3(pgd_t1);
 }
 
 void activate_pagination(){
@@ -317,9 +322,9 @@ void init_timer(){
 
 //TASKS
 
-void init_task(int id, void (*func)(), uint8_t *kstack, uint8_t *ustack) {
+void init_task(int id, void (*func)(), uint8_t *kstack, uint8_t *ustack, uint32_t pd_phys) {
     task_t *t = &tasks[id];
-    t->cr3 = (uint32_t)pgd;
+    t->cr3 = pd_phys;
     t->esp0 = (uint32_t)(kstack + STACK_SIZE);
 
     uint32_t *esp = (uint32_t *)(kstack + STACK_SIZE);
@@ -418,8 +423,8 @@ void tp() {
     print_gdt_content(gdtr);
     
     //Tasks
-    init_task(0, user1, kstack_t1, ustack_t1);
-    init_task(1, user2, kstack_t2, ustack_t2);
+    init_task(0, user1, kstack_t1, ustack_t1, (uint32_t)pgd_t1);
+    init_task(1, user2, kstack_t2, ustack_t2, (uint32_t)pgd_t2);
 
     //Launch first task
     current_task = 0;
