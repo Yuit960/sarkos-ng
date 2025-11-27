@@ -1,0 +1,9 @@
+#ifndef UTILS_H
+#define UTILS_H
+
+#define SHARED_ADDR_U1  0xCAFE0000
+#define SHARED_ADDR_U2  0xBEEF0000
+#define PRINT_COUNTER_ISR 1
+#define STACK_SIZE 4096
+
+#endif
