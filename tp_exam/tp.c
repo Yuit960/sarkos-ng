@@ -4,6 +4,7 @@
 #include <pagemem.h>
 #include <cr.h>
 #include <intr.h>
+#include <io.h>
 
 /*SEGMENT FOR DEBUG START*/
 
@@ -37,9 +38,20 @@ void print_gdt_content(gdt_reg_t gdtr_ptr) {
     }
 }
 
+void check_ring() {
+    uint32_t cs_reg;
+    asm volatile("mov %%cs, %0" : "=r"(cs_reg));
+    
+    if ((cs_reg & 0x3) == 3) {
+        debug("Currently RING 3 (CS = 0x%x)\n", cs_reg);
+    } else {
+        debug("Currently RING 0 (CS = 0x%x)\n", cs_reg);
+    }
+}
 
 
-/*SEGMENT FOR DEBUT END*/
+
+/*SEGMENT FOR DEBUG END*/
 
 
 
@@ -221,10 +233,20 @@ void activate_pagination(){
 void syscall_isr() {
    asm volatile (
       "leave ; pusha        \n"
-      "mov %esp, %eax      \n"
+      "mov %esp, %eax       \n"
       "call syscall_handler \n"
       "popa ; iret"
       );
+}
+
+void irq0_isr(void) {
+    asm volatile (
+        "leave; pusha      \n"
+        "call schedule     \n"
+        "mov $0x20, %al    \n"
+        "out %al, $0x20    \n"
+        "popa ; iret       \n"
+    );
 }
 
 void __regparm__(1) syscall_handler(int_ctx_t *ctx){
@@ -245,16 +267,62 @@ void __regparm__(1) syscall_handler(int_ctx_t *ctx){
 	}
 }
 
+void schedule(){
+	debug("Scheduler called.\n");
+}
+
 void init_interruption(){
 	idt_reg_t idtr;
    	get_idtr(idtr);
-	int_desc_t *bp_dsc = &idtr.desc[0x80];
-	bp_dsc->offset_1 = (uint16_t)((uint32_t)syscall_isr);
-	bp_dsc->offset_2 = (uint16_t)(((uint32_t)syscall_isr)>>16);
+
+	int_desc_t *sys_dsc = &idtr.desc[0x80];
+	sys_dsc->offset_1 = (uint16_t)((uint32_t)syscall_isr);
+	sys_dsc->offset_2 = (uint16_t)(((uint32_t)syscall_isr)>>16);
+	sys_dsc->type = 0xE;
+    sys_dsc->p = 1;
+    sys_dsc->dpl = 3;
+
+	int_desc_t *clk_dsc = &idtr.desc[32];
+	clk_dsc->offset_1 = (uint16_t)((uint32_t)irq0_isr);
+	clk_dsc->offset_2 = (uint16_t)(((uint32_t)irq0_isr)>>16);
+	clk_dsc->type = 0xE;
+    clk_dsc->p = 1;
+    clk_dsc->dpl = 0;
+}
+
+//CLOCK
+
+void init_timer(){
+    uint32_t divisor = 1193180 / 100; // 100 Hz
+    outb(0x43, 0x36);
+    outb(0x40, divisor & 0xFF);
+    outb(0x40, divisor >> 8);
+	outb(0x21, 0xFE);
+}
+
+void enable_timer(){
+	asm volatile("sti");
 }
 
 
+//PRIVILEGE LEVELS
 
+// void switch_ring3(){
+// 	asm volatile (
+//    "push %0    \n" // ss
+//    "push %%ebp \n" // esp
+//    "pushf      \n" // eflags
+//    "push %1    \n" // cs
+//    "push %2    \n" // eip
+//    // end Q2
+//    // Q3
+//    "iret"
+//    ::
+//     "i"(gdt_usr_seg_sel(4)),
+//     "i"(gdt_usr_seg_sel(3)),
+//     "r"(&user2)
+//    );
+// }
 
 
 
@@ -311,7 +379,19 @@ void tp() {
 	init_pagination();
 	activate_pagination();
 
-	//Init interruptions
+	//Interruptions
 	init_interruption();
+
+	//Timer
+	init_timer();
+	enable_timer();
+
+	check_ring();
+
+
+
+
+
+	while(1);
 
 }
