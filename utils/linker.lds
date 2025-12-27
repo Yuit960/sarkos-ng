@@ -29,9 +29,11 @@ SECTIONS
    __kernel_end__ = .;
 
    . = 0x400000;
+   
    __user_start__ = .;
 
-   .user : { KEEP(*(.user)) }
+   .user_text : { KEEP(*(.user_text)) } : phsetup
+   .user_data : { KEEP(*(.user_data)) } : phsetup
 
    __user_end__ = .;
 
