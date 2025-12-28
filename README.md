@@ -20,8 +20,6 @@ La sortie QEMU affichera les traces de debug du noyau ainsi que l'affichage du c
 
 ## Fonctionnalités Implémentées
 
-## Fonctionnalités Implémentées
-
 Le système d'exploitation développé intègre, conformément au cahier des charges :
 
 * **Intégration au Noyau :** Le code et les données des tâches utilisateur sont inclus directement dans le binaire du noyau à la compilation via des sections ELF spécifiques (`.user_text` et `.user_data`).

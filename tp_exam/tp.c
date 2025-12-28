@@ -221,7 +221,7 @@ void irq0_isr(void)
                "call schedule      \n"
                "movl tmp_esp, %esp \n"
                "mov $0x20, %al     \n"
-               "out %al, $0x20     \n"
+               "out %al, $0x20     \n" //Send End of Interrupt to Timer
                "popa ; iret        \n");
 }
 
@@ -268,10 +268,10 @@ void init_interruption()
 void init_timer()
 {
   uint32_t divisor = 1193180 / 100; // 100 Hz
-  outb(0x43, 0x36);
-  outb(0x40, divisor & 0xFF);
-  outb(0x40, divisor >> 8);
-  outb(0x21, 0xFE);
+  outb(0x43, 0x36);                 // Set Square wave mode
+  outb(0x40, divisor & 0xFF);       // Send low byte of divisor
+  outb(0x40, divisor >> 8);         // Send high byte of divisor
+  outb(0x21, 0xFE);                 // Enable IRQ0 and mask other interrupts
 }
 
 // TASKS
